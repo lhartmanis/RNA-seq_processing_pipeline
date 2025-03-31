@@ -1,0 +1,59 @@
+# General settings
+run_fastp: true  # Whether to run fastp for read trimming
+read_type: "paired"  # Options: "paired" or "single"
+
+executables:
+  fastp: "fastp"
+  fastqc: "/home/leonard.hartmanis/packages/FastQC/fastqc"
+  star: "/home/leonard.hartmanis/packages/STAR-2.7.3a/source/STAR"
+  featurecounts: "featureCounts"
+  python: "python"  # Path to Python interpreter
+
+# Directories
+input_dir: "data"
+output_dir: "results"
+temp_dir: "tmp"
+
+samples:
+  - SW-R-20076
+
+# Input files
+input_files:
+  r1: "/home/leonard.hartmanis/data/RNAseq/demultiplexed_files/new_pipeline_test/data/SW-R-20076_S76_R1_001.fastq.gz"  # Required for both single-end & paired-end
+  r2: "/home/leonard.hartmanis/data/RNAseq/demultiplexed_files/new_pipeline_test/data/SW-R-20076_S76_R2_001.fastq.gz"  # Only required for paired-end
+
+# fastqc settings
+fastqc_before_trimming: true  # Run FastQC before trimming
+fastqc_after_trimming: true  # Run FastQC after trimming
+
+# fastp settings
+fastp_threads: 4  # Number of threads for fastp
+fastp_params: ""  # Additional custom parameters for fastp (leave empty by default)
+
+# STAR settings
+star_threads: 10  # Number of threads for STAR
+star_genome_index: "/home/leonard.hartmanis/resources/genomes/homo_sapiens/STAR_idx_2.7.3a"  # Path to STAR genome index
+annotation_gtf: "/home/leonard.hartmanis/resources/genomes/homo_sapiens/gencode.v45.chr_patch_hapl_scaff.annotation.gtf"  # Path to GTF file
+sjdb_overhang: 99  # Default value for sjdbOverhang
+outFilterMultimapNmax: 50  # Default value for outFilterMultimapNmax
+outBAMsortingThreadN: 10  # Default value for BAM sorting threads
+clip3AdapterSeq: "CTGTCTCTTATACACATCT"  # Default adapter sequence
+quant_mode: "GeneCounts"  # Default quantification mode (Check if this is correct!)
+star_params: ""  # Additional custom parameters for STAR (leave empty by default)
+
+# featureCounts settings
+featurecounts_threads: 5  # Number of threads for featureCounts
+exon_saf: "/home/leonard.hartmanis/resources/genomes/homo_sapiens/gencode_45_saf/SAF_exons_noheader.txt"  # Path to SAF file for exon mode
+intron_saf: "/home/leonard.hartmanis/resources/genomes/homo_sapiens/gencode_45_saf/SAF_introns_noheader.txt"  # Path to SAF file for intron mode
+featurecounts_params: "-p largestOverlap --primary"  # Additional custom parameters for featureCounts
+
+# Merge BAM settings
+merge_priority: "exon"  # Default priority for merging (exon or intron)
+merge_threads: 10  # Number of threads for sorting
+merge_index: true  # Whether to index the output BAM file
+
+# Quantification and stats settings
+quant_threads: 10  # Number of threads for quantification and stats
+
+# Cleanup settings
+cleanup_intermediates: false  # Whether to clean up intermediate files
