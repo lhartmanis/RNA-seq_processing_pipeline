@@ -92,6 +92,7 @@ executables:
   star: "STAR"
   featurecounts: "featureCounts"
   python: "python3"
+```
 
 ## **Output**
 The pipeline generates the following outputs for each sample:
