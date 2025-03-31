@@ -33,7 +33,7 @@ The following software must be installed and available in your `PATH`:
 ## **Installation**
 1. Clone this repository:
    ```bash
-   git clone https://github.com/<your-username>/RNA_seq_processing_pipeline.git
+   git clone https://github.com/lhartmanis/RNA-seq_processing_pipeline.git
    cd RNA_seq_processing_pipeline
 2. Install the required software and dependencies.
 3. Edit the config.yaml file to specify your input files, output directory, and pipeline parameters.
