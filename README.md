@@ -29,7 +29,6 @@ The following software must be installed and available in your `PATH`:
 ### **Input Files**
 - Paired-end or single-end FASTQ files in the format `{sample}_R1.fastq.gz` and `{sample}_R2.fastq.gz` (for paired-end reads).
 - Reference genome index for STAR.
-- SAF files for exon and intron quantification.
 
 ## **Installation**
 1. Clone this repository:
