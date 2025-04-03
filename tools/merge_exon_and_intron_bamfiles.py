@@ -4,7 +4,6 @@ import subprocess
 import os
 import time
 import logging
-from datetime import datetime
 
 def setup_logging(log_file):
     """Set up logging to print to both console and a log file."""
