@@ -274,8 +274,7 @@ rule rename_featurecounts_bam:
     params:
         exon_dir="{output_dir}/{sample}/results/exon",
         intron_dir="{output_dir}/{sample}/results/intron"
-        #exon_dir=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/exon",
-        #intron_dir=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/intron"
+
     run:
         from utils import rename_featurecounts_bam
         exon_bam, intron_bam = rename_featurecounts_bam(
@@ -325,7 +324,7 @@ rule quantify_expression:
     params:
         python_exec=config["executables"]["python"],
         prefix="{output_dir}/{sample}/results/{sample}",
-        threads=config.get("quant_threads", 10)  # Number of threads (default: 10)
+        threads=config.get("quant_threads", 10)  
     shell:
         """
         {params.python_exec} tools/quantify_expression_generate_stats.py \
@@ -345,7 +344,6 @@ rule cleanup:
         sample=lambda wildcards: wildcards.sample
     run:
         from utils import cleanup_pipeline_results
-        # Perform cleanup for the sample
         cleanup_pipeline_results(params.output_dir, params.sample)
         # Touch the cleanup_done.txt file to indicate completion
         with open(output.cleanup_done, "w") as f:
@@ -353,7 +351,7 @@ rule cleanup:
 
 rule revert_renaming:
     input:
-        "{output_dir}/{sample}/cleanup_done.txt"  # Ensure the pipeline has finished
+        "{output_dir}/{sample}/cleanup_done.txt"  
     output:
         reverting_done ="{output_dir}/{sample}/reverting_done.txt"
     params:
