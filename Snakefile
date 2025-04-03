@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 import shutil
-from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results
+from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results, get_saf_files
 
 configfile: "config.yaml"
 
@@ -24,6 +24,8 @@ def check_executable(tool):
 
 rule all:
     input:
+        # Ensure SAF creation is completed
+        "saf_creation_done.txt" if config["generate_saf"] else "saf_creation_skipped.txt",
         # Ensure renaming is completed
         expand("{output_dir}/{sample}/renaming_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         # Include trimmed reads only if fastp is run
@@ -45,6 +47,47 @@ rule all:
         # Cleanup and reverting outputs
         expand("{output_dir}/{sample}/cleanup_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         expand("{output_dir}/{sample}/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"])
+
+rule generate_saf_and_gene_lengths:
+    output:
+        saf_creation_started="saf_creation_started.txt",
+        saf_creation_done="saf_creation_done.txt",
+        gene_lengths="shared_data/gene_lengths.txt",
+        exon_saf="shared_data/exon_SAF.txt" if config["generate_saf"] else temp("dummy_exon_saf"),
+        intron_saf="shared_data/intron_SAF.txt" if config["generate_saf"] else temp("dummy_intron_saf")
+    params:
+        gtf_file=config["annotation_gtf"],
+        output_dir="shared_data",
+        generate_saf=config["generate_saf"],
+        script="tools/generate_saf_and_gene_lengths.py",
+        python_exec=config["executables"]["python"],
+        saf_flag="-s" if config["generate_saf"] else ""
+    run:
+        import os
+        os.makedirs(params.output_dir, exist_ok=True)
+        
+        if params.generate_saf:
+            # Touch the "saf_creation_started.txt" file
+            with open(output.saf_creation_started, "w") as f:
+                f.write("SAF creation started.\n")
+
+            # Run the SAF and gene lengths generation script
+            shell(
+                """
+                {params.python_exec} {params.script} \
+                    -g {params.gtf_file} \
+                    -o {params.output_dir} \
+                    {params.saf_flag}
+                """
+            )
+
+            # Touch the "saf_creation_done.txt" file
+            with open(output.saf_creation_done, "w") as f:
+                f.write("SAF creation completed.\n")
+        else:
+            # Create a dummy file to indicate SAF creation was skipped
+            with open(output.saf_creation_done, "w") as f:
+                f.write("SAF creation skipped.\n")
 
 rule rename_files:
     input:
@@ -200,7 +243,10 @@ rule star_mapping:
 
 rule featurecounts:
     input:
-        bam=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_Aligned.sortedByCoord.out.bam"
+        bam=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_Aligned.sortedByCoord.out.bam",
+        saf_creation_done="saf_creation_done.txt" if config["generate_saf"] else "saf_creation_skipped.txt",
+        exon_saf="shared_data/exon_SAF.txt" if config["generate_saf"] else config["exon_saf"],
+        intron_saf="shared_data/intron_SAF.txt" if config["generate_saf"] else config["intron_saf"]
     output:
         exon="{output_dir}/{sample}/results/exon/exon_counts.txt",
         intron="{output_dir}/{sample}/results/intron/intron_counts.txt"
@@ -208,16 +254,14 @@ rule featurecounts:
     params:
         exon_dir="{output_dir}/{sample}/results/exon",
         intron_dir="{output_dir}/{sample}/results/intron",
-        exon_saf=config.get("exon_saf", "/path/to/exon_SAF"),
-        intron_saf=config.get("intron_saf", "/path/to/intron_SAF"),
         featurecounts_params=config.get("featurecounts_params", "-p --largestOverlap --primary"),
         featurecounts_exec=config["executables"]["featurecounts"]
     shell:
         """
         mkdir -p {params.exon_dir} {params.intron_dir} && \
         chmod u+w {params.exon_dir} {params.intron_dir} && \
-        {params.featurecounts_exec} -F SAF -a {params.exon_saf} -o {output.exon} -T {threads} -R BAM {params.featurecounts_params} {input.bam} && \
-        {params.featurecounts_exec} -F SAF -a {params.intron_saf} -o {output.intron} -T {threads} -R BAM {params.featurecounts_params} {input.bam}
+        {params.featurecounts_exec} -F SAF -a {input.exon_saf} -o {output.exon} -T {threads} -R BAM {params.featurecounts_params} {input.bam} && \
+        {params.featurecounts_exec} -F SAF -a {input.intron_saf} -o {output.intron} -T {threads} -R BAM {params.featurecounts_params} {input.bam}
         """
 
 rule rename_featurecounts_bam:
