@@ -44,8 +44,10 @@ star_params: ""  # Additional custom parameters for STAR (leave empty by default
 
 # featureCounts settings
 featurecounts_threads: 5  # Number of threads for featureCounts
+generate_saf: true
 exon_saf: "/path/to/exon_SAF"  # Path to SAF file for exon mode
 intron_saf: "/path/to/intron_SAF"  # Path to SAF file for intron mode
+gene_lengths: "{output_dir}/gene_lengths.txt" # Path to gene lengths file
 featurecounts_params: "-p --largestOverlap --primary"  # Additional custom parameters for featureCounts
 
 # Merge BAM settings
