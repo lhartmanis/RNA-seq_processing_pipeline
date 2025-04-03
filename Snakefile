@@ -16,12 +16,6 @@ ensure_directories_exist(
     samples=config["samples"]
 )
 
-# Check if an executable exists
-def check_executable(tool):
-    if not shutil.which(tool):
-        log_message("ERROR", f"{tool} not found! Make sure it is installed or specified in config.yaml", error=True)
-        exit(1)
-
 rule all:
     input:
         # Ensure SAF creation is completed
