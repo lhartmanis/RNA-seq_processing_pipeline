@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 import shutil
-from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results, get_saf_files
+from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results
 
 configfile: "config.yaml"
 
