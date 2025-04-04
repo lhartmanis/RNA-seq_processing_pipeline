@@ -3,8 +3,18 @@ from datetime import datetime
 import shutil
 from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results
 
-configfile: "config.yaml"
 shared_data_dir = f"{config['output_dir']}/shared_data"
+
+# Determine the list of samples
+if "samples_file" in config and config["samples_file"]:
+    # Read sample names from the file
+    with open(config["samples_file"], "r") as f:
+        config["samples"] = [line.strip() for line in f if line.strip()]
+elif "samples" in config and config["samples"]:
+    # Use the samples list from the YAML file
+    config["samples"] = config["samples"]
+else:
+    raise ValueError("No samples specified. Please provide either 'samples_file' or 'samples' in the configuration yaml file.")
 
 # Ensure config["samples"] is always a list
 if isinstance(config["samples"], str):
