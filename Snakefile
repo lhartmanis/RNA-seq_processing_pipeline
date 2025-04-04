@@ -3,6 +3,12 @@ from datetime import datetime
 import shutil
 from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results
 
+if not os.path.exists(f"{config['output_dir']}"):
+    os.makedirs(f"{config['output_dir']}")
+
+if not os.path.exists(f"{config['temp_dir']}"):
+    os.makedirs(f"{config['temp_dir']}")
+
 shared_data_dir = f"{config['output_dir']}/shared_data"
 
 # Determine the list of samples
@@ -22,7 +28,7 @@ if isinstance(config["samples"], str):
 
 # Ensure the required directories exist
 ensure_directories_exist(
-    base_dirs=["results/exon", "results/intron", "results/fastqc", "snakemake_checkpoints", "results/trimmed_fastq", "results/expression", "results/stats"],
+    base_dirs=["results/exon", "results/intron", "results/fastqc", "snakemake_checkpoints", "results/trimmed_fastq", "results/alignment", "results/expression", "results/stats"],
     output_dir=config["output_dir"],
     samples=config["samples"]
 )
@@ -48,7 +54,7 @@ rule all:
         expand("{output_dir}/{sample}/results/expression/{sample}_combined_counts.txt", sample=config["samples"], output_dir=config["output_dir"]),
         expand("{output_dir}/{sample}/results/stats/{sample}_expression_stats.txt", sample=config["samples"], output_dir=config["output_dir"]),
         # Aligned BAM files
-        expand("{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam", sample=config["samples"], output_dir=config["output_dir"]),
+        expand("{output_dir}/{sample}/results/alignment/{sample}_intron_exon_aligned.bam", sample=config["samples"], output_dir=config["output_dir"]),
         # Cleanup and reverting outputs
         expand("{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         expand("{output_dir}/{sample}/snakemake_checkpoints/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"])
@@ -126,6 +132,8 @@ if config.get("run_fastp", False):
             detect_adapter_for_pe = lambda wildcards: "--detect_adapter_for_pe" if config["read_type"] == "paired" else "",
             threads = config["fastp_threads"],
             extra = config.get("fastp_params", "")
+        resources:
+            mem_mb = lambda wildcards: int(os.path.getsize(f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz") / 1e6 * 2)  # 2x input file size in MB
         shell:
             """
             {params.fastp_exec} -i {params.read1} \
@@ -164,9 +172,11 @@ rule fastqc_raw:
         ),
         fastqc_exec = config["executables"]["fastqc"],
         out_folder = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/fastqc/"
+    resources:
+        mem_mb = config.get("fastqc_mem_mb", 1000)
     shell:
         """
-        {params.fastqc_exec} {params.raw} -o {params.out_folder}
+        {params.fastqc_exec} {params.raw} -t 2 -o {params.out_folder}
         """
 
 rule fastqc_trimmed:
@@ -188,21 +198,22 @@ rule fastqc_trimmed:
         ),
         fastqc_exec = config["executables"]["fastqc"],
         out_folder = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/fastqc/"
+    resources:
+        mem_mb = 1000
     shell:
         """
-        {params.fastqc_exec} {params.trimmed} -o {params.out_folder}
+        {params.fastqc_exec} {params.trimmed} -t 2 -o {params.out_folder}
         """
-
 
 rule star_mapping:
     input:
         read1 = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R1.fastq.gz" if config["run_fastp"] else f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz",
         read2 = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R2.fastq.gz" if config["run_fastp"] and config["read_type"] == "paired" else f"{config['input_dir']}/{wildcards.sample}_R2.fastq.gz" if config["read_type"] == "paired" else None
     output:
-        "{output_dir}/{sample}/results/{sample}_Aligned.sortedByCoord.out.bam"
+        "{output_dir}/{sample}/results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     threads: config["star_threads"]
     params:
-        tmp_dir = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/{config.get('temp_dir', 'tmp')}",
+        tmp_dir = lambda wildcards: f"{config.get('temp_dir')}/{wildcards.sample}",
         genome_dir = config.get("star_genome_index", "/path/to/genomeDir"),
         gtf_file = config.get("annotation_gtf", "/path/to/annotation.gtf"),
         overhang = config.get("sjdb_overhang", 99),
@@ -212,10 +223,12 @@ rule star_mapping:
         quant_mode = config.get("quant_mode", "GeneCounts"),
         star_params = config.get("star_params", ""),
         star_exec = config["executables"]["star"]
+    
+    resources:
+        mem_mb = config.get("star_mem_mb", 50000)  # Adjust memory as needed
     run:
         import shutil
         import os
-
         # Remove the temporary directory if it already exists, STAR crashes otherwise
         if os.path.exists(params.tmp_dir):
             shutil.rmtree(params.tmp_dir)
@@ -224,12 +237,30 @@ rule star_mapping:
         # Run the STAR command
         shell(
             """
+            echo "Running STAR for sample: {wildcards.sample}" && \
+            echo " {params.star_exec} --runThreadN {threads} \
+                 --genomeDir {params.genome_dir} \
+                 --readFilesIn {input.read1} {input.read2} \
+                 --readFilesCommand zcat \
+                 --outFilterMultimapNmax {params.multimap_max} \
+                 --outFileNamePrefix {wildcards.output_dir}/{wildcards.sample}/results/alignment/{wildcards.sample}_ \
+                 --outSAMtype BAM SortedByCoordinate \
+                 --readFilesType Fastx \
+                 --clip3pAdapterSeq {params.adapter_seq} \
+                 --outTmpDir {params.tmp_dir} \
+                 --outSAMunmapped Within \
+                 --outSAMmultNmax 1 \
+                 --outBAMsortingThreadN {params.sorting_threads} \
+                 --sjdbGTFfile {params.gtf_file} \
+                 --sjdbOverhang {params.overhang} \
+                 --quantMode {params.quant_mode} \
+                 {params.star_params}" && \
             {params.star_exec} --runThreadN {threads} \
                  --genomeDir {params.genome_dir} \
                  --readFilesIn {input.read1} {input.read2} \
                  --readFilesCommand zcat \
                  --outFilterMultimapNmax {params.multimap_max} \
-                 --outFileNamePrefix {wildcards.output_dir}/{wildcards.sample}/results/{wildcards.sample}_ \
+                 --outFileNamePrefix {wildcards.output_dir}/{wildcards.sample}/results/alignment/{wildcards.sample}_ \
                  --outSAMtype BAM SortedByCoordinate \
                  --readFilesType Fastx \
                  --clip3pAdapterSeq {params.adapter_seq} \
@@ -244,8 +275,8 @@ rule star_mapping:
             """
         )
         
-        # Move STAR output files to a STAR_output folder
-        results_dir = f"{wildcards.output_dir}/{wildcards.sample}/results"
+        # Move STAR log files to a STAR_output folder
+        results_dir = f"{wildcards.output_dir}/{wildcards.sample}/results/alignment"
         star_output_dir = os.path.join(results_dir, "STAR_output")
         os.makedirs(star_output_dir, exist_ok=True)
 
@@ -265,7 +296,7 @@ rule star_mapping:
 
 rule featurecounts:
     input:
-        bam = lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_Aligned.sortedByCoord.out.bam",
+        bam = lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/alignment/{wildcards.sample}_Aligned.sortedByCoord.out.bam",
         saf_creation_status = f"{shared_data_dir}/saf_creation_done.txt" if config["generate_saf"] else f"{shared_data_dir}/saf_creation_skipped.txt",
         exon_saf = f"{shared_data_dir}/exon_SAF.txt" if config["generate_saf"] else config["exon_saf"],
         intron_saf = f"{shared_data_dir}/intron_SAF.txt" if config["generate_saf"] else config["intron_saf"]
@@ -336,7 +367,7 @@ rule merge_bam:
 
 rule quantify_expression:
     input:
-        bam = lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_intron_exon_aligned.bam"
+        bam = lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/alignment/{wildcards.sample}_intron_exon_aligned.bam"
     output:
         exon_counts = "{output_dir}/{sample}/results/expression/{sample}_exon_counts.txt",
         intron_counts = "{output_dir}/{sample}/results/expression/{sample}_intron_counts.txt",
@@ -360,7 +391,7 @@ rule quantify_expression:
 # This might need to change from aligned bam to count files.
 rule cleanup:
     input:
-        aligned_bam = "{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam"
+        aligned_bam = "{output_dir}/{sample}/results/alignment/{sample}_intron_exon_aligned.bam"
     output:
         cleanup_done = "{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt"
     params:
