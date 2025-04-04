@@ -5,6 +5,8 @@ import os
 
 def generate_safs_and_gene_lengths(gtf_file, output_dir, generate_safs = True):
     print("Reading GTF file...")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     gtf = pr.read_gtf(gtf_file)
     exons = gtf[gtf.Feature == "exon"]
     genes = gtf[gtf.Feature == "gene"]
@@ -34,14 +36,12 @@ def generate_safs_and_gene_lengths(gtf_file, output_dir, generate_safs = True):
     gene_lengths_df.to_csv(gene_lengths_file, sep="\t", index=False)
 
     if generate_safs:
-        if not os.path.exists("shared_data"):
-            os.makedirs("shared_data")
         print("Generating SAF files...")
         # Exon SAF
         print("Making exon SAF...")
         exon_saf = exons.df[["gene_id", "Chromosome", "Start", "End", "Strand"]]
         exon_saf.columns = ["GeneID", "Chr", "Start", "End", "Strand"]
-        exon_saf_file = "shared_data/exon_SAF.txt"
+        exon_saf_file = f"{output_dir}/exon_SAF.txt"
         print(f"Saving exon SAF to {exon_saf_file}...")
         exon_saf.to_csv(exon_saf_file, sep="\t", index=False, header=False)
 
@@ -65,7 +65,7 @@ def generate_safs_and_gene_lengths(gtf_file, output_dir, generate_safs = True):
                 intron_list.append([gene, chrom, last_end, gene_end, strand])
                 
         intron_saf = pd.DataFrame(intron_list, columns=["GeneID", "Chr", "Start", "End", "Strand"])
-        intron_saf_file = f"shared_data/intron_SAF.txt"
+        intron_saf_file = f"{output_dir}/intron_SAF.txt"
         print(f"Saving intron SAF to {intron_saf_file}...")
         intron_saf.to_csv(intron_saf_file, sep="\t", index=False, header=False)
 
