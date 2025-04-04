@@ -65,7 +65,8 @@ def sort_and_index_bam(output_bam_path, num_threads, index_output):
 
 def merge_bam_files(exon_bam_path, intron_bam_path, output_bam_path, priority, sort_output, num_threads, index_output):
     """Merge exon and intron BAM files, ensuring correct tag propagation and SAM flag consistency."""
-    
+    if not os.path.exists(output_bam_path):
+        os.makedirs(os.path.dirname(output_bam_path), exist_ok=True)
     start_time = time.time()
     logging.info("Starting BAM merging process...")
 
