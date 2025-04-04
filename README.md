@@ -31,7 +31,7 @@ The following software must be installed and available in your `PATH`:
     - numpy
 
 ### **Input Files**
-- Paired-end or single-end FASTQ files are placed in the `input dir` folder and named according to: `{sample}_R1.fastq.gz` and `{sample}_R2.fastq.gz` (for paired-end reads). 
+- Paired-end or single-end FASTQ files are placed in the `input_dir` folder and named according to: `{sample}_R1.fastq.gz` and `{sample}_R2.fastq.gz` (for paired-end reads). 
 - Reference genome index for STAR.
 
 ## **Installation**
