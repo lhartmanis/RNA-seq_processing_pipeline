@@ -1,4 +1,4 @@
-import shutil, os, re, glob, json, yaml
+import shutil, os, re, glob, json
 import time
 from datetime import datetime
 import subprocess
@@ -70,7 +70,6 @@ def rename_featurecounts_bam(sample, exon_dir, intron_dir):
     os.rename(intron_bam_files[0], intron_bam_renamed)
 
     return exon_bam_renamed, intron_bam_renamed
-
 
 def check_executable(tool):
     """Check if an executable exists, otherwise log an error and exit."""
