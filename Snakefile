@@ -4,6 +4,7 @@ import shutil
 from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results
 
 configfile: "config.yaml"
+shared_data_dir = f"{config['output_dir']}/shared_data"
 
 # Ensure config["samples"] is always a list
 if isinstance(config["samples"], str):
@@ -11,7 +12,7 @@ if isinstance(config["samples"], str):
 
 # Ensure the required directories exist
 ensure_directories_exist(
-    base_dirs=["results/exon", "results/intron"],
+    base_dirs=["results/exon", "results/intron", "results/fastqc", "snakemake_checkpoints", "results/trimmed_fastq", "results/expression", "results/stats"],
     output_dir=config["output_dir"],
     samples=config["samples"]
 )
@@ -19,47 +20,44 @@ ensure_directories_exist(
 rule all:
     input:
         # Ensure SAF creation is completed
-        "saf_creation_done.txt" if config["generate_saf"] else "saf_creation_skipped.txt",
+        f"{shared_data_dir}/saf_creation_done.txt" if config["generate_saf"] else f"{shared_data_dir}/saf_creation_skipped.txt",
         # Ensure renaming is completed
-        expand("{output_dir}/{sample}/renaming_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
+        expand("{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         # Include trimmed reads only if fastp is run
-        expand("{output_dir}/{sample}/results/{sample}_trimmed_R1.fastq.gz", sample=config["samples"], output_dir=config["output_dir"]) if config.get("run_fastp", False) else [],
-        expand("{output_dir}/{sample}/results/{sample}_trimmed_R2.fastq.gz", sample=config["samples"], output_dir=config["output_dir"]) if config.get("run_fastp", False) and config["read_type"] == "paired" else [],
+        expand("{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R1.fastq.gz", sample=config["samples"], output_dir=config["output_dir"]) if config.get("run_fastp", False) else [],
+        expand("{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R2.fastq.gz", sample=config["samples"], output_dir=config["output_dir"]) if config.get("run_fastp", False) and config["read_type"] == "paired" else [],
+        # FastQC outputs (before trimming)
+        expand("{output_dir}/{sample}/results/fastqc/{sample}_R1_fastqc.html", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_before_trimming"] else [],
+        expand("{output_dir}/{sample}/results/fastqc/{sample}_R2_fastqc.html", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_before_trimming"] and config["read_type"] == "paired" else [],
+        # FastQC outputs (after trimming)
+        expand("{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R1_fastqc.html", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_after_trimming"] else [],
+        expand("{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R2_fastqc.html", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_after_trimming"] and config["read_type"] == "paired" else [],
         # Quantification outputs
-        expand("{output_dir}/{sample}/results/{sample}_exon_counts.txt", sample=config["samples"], output_dir=config["output_dir"]),
-        expand("{output_dir}/{sample}/results/{sample}_intron_counts.txt", sample=config["samples"], output_dir=config["output_dir"]),
-        expand("{output_dir}/{sample}/results/{sample}_combined_counts.txt", sample=config["samples"], output_dir=config["output_dir"]),
-        expand("{output_dir}/{sample}/results/{sample}_expression_stats.txt", sample=config["samples"], output_dir=config["output_dir"]),
+        expand("{output_dir}/{sample}/results/expression/{sample}_exon_counts.txt", sample=config["samples"], output_dir=config["output_dir"]),
+        expand("{output_dir}/{sample}/results/expression/{sample}_intron_counts.txt", sample=config["samples"], output_dir=config["output_dir"]),
+        expand("{output_dir}/{sample}/results/expression/{sample}_combined_counts.txt", sample=config["samples"], output_dir=config["output_dir"]),
+        expand("{output_dir}/{sample}/results/stats/{sample}_expression_stats.txt", sample=config["samples"], output_dir=config["output_dir"]),
         # Aligned BAM files
         expand("{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam", sample=config["samples"], output_dir=config["output_dir"]),
-        # FastQC outputs (before trimming)
-        expand("{output_dir}/{sample}/results/{sample}_R1_fastqc.html", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_before_trimming"] else [],
-        expand("{output_dir}/{sample}/results/{sample}_R2_fastqc.html", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_before_trimming"] and config["read_type"] == "paired" else [],
-        # FastQC outputs (after trimming)
-        expand("{output_dir}/{sample}/results/{sample}_trimmed_R1_fastqc.html", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_after_trimming"] else [],
-        expand("{output_dir}/{sample}/results/{sample}_trimmed_R2.fastq.gz", sample=config["samples"], output_dir=config["output_dir"]) if config["fastqc_after_trimming"] and config["read_type"] == "paired" else [],
         # Cleanup and reverting outputs
-        expand("{output_dir}/{sample}/cleanup_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
-        expand("{output_dir}/{sample}/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"])
+        expand("{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
+        expand("{output_dir}/{sample}/snakemake_checkpoints/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"])
 
 rule generate_saf_and_gene_lengths:
     output:
-        saf_creation_started="saf_creation_started.txt",
-        saf_creation_done="saf_creation_done.txt",
-        gene_lengths="shared_data/gene_lengths.txt",
-        exon_saf="shared_data/exon_SAF.txt" if config["generate_saf"] else temp("dummy_exon_saf"),
-        intron_saf="shared_data/intron_SAF.txt" if config["generate_saf"] else temp("dummy_intron_saf")
+        saf_creation_started = f"{shared_data_dir}/saf_creation_started.txt",
+        saf_creation_status = f"{shared_data_dir}/saf_creation_done.txt" if config["generate_saf"] else f"{shared_data_dir}/saf_creation_skipped.txt",
+        gene_lengths = f"{shared_data_dir}/gene_lengths.txt",
+        exon_saf = f"{shared_data_dir}/exon_SAF.txt" if config["generate_saf"] else temp("dummy_exon_saf"),
+        intron_saf = f"{shared_data_dir}/intron_SAF.txt" if config["generate_saf"] else temp("dummy_intron_saf")
     params:
-        gtf_file=config["annotation_gtf"],
-        output_dir="shared_data",
-        generate_saf=config["generate_saf"],
-        script="tools/generate_saf_and_gene_lengths.py",
-        python_exec=config["executables"]["python"],
-        saf_flag="-s" if config["generate_saf"] else ""
-    run:
-        import os
-        os.makedirs(params.output_dir, exist_ok=True)
-        
+        gtf_file = config["annotation_gtf"],
+        output_dir = shared_data_dir,
+        generate_saf = config["generate_saf"],
+        script = "tools/generate_saf_and_gene_lengths.py",
+        python_exec = config["executables"]["python"],
+        saf_flag = "-s" if config["generate_saf"] else ""
+    run:        
         if params.generate_saf:
             # Touch the "saf_creation_started.txt" file
             with open(output.saf_creation_started, "w") as f:
@@ -76,27 +74,27 @@ rule generate_saf_and_gene_lengths:
             )
 
             # Touch the "saf_creation_done.txt" file
-            with open(output.saf_creation_done, "w") as f:
+            with open(output.saf_creation_status, "w") as f:
                 f.write("SAF creation completed.\n")
         else:
-            # Create a dummy file to indicate SAF creation was skipped
-            with open(output.saf_creation_done, "w") as f:
+            # Touch the "saf_creation_skipped.txt" file
+            with open(output.saf_creation_status, "w") as f:
                 f.write("SAF creation skipped.\n")
 
 rule rename_files:
     input:
         # Ensure the input directory exists
-        directory=config["input_dir"]
+        directory = config["input_dir"]
     output:
-        renaming_done="{output_dir}/{sample}/renaming_done.txt",
-        mapping_file="{output_dir}/{sample}/renaming_map.json"
+        renaming_done ="{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt",
+        mapping_file = "{output_dir}/{sample}/renaming_map.json"
     run:
         from utils import rename_files
         # Perform renaming for the sample
         rename_files(
-            input_dir=input.directory,
-            config_file="config.yaml",
-            mapping_file=output.mapping_file
+            input_dir = input.directory,
+            config_file = "config.yaml",
+            mapping_file = output.mapping_file
         )
         # Touch the renaming_done.txt file to indicate completion
         with open(output.renaming_done, "w") as f:
@@ -105,19 +103,19 @@ rule rename_files:
 if config.get("run_fastp", False):
     rule fastp:
         input:
-            renaming_done="{output_dir}/{sample}/renaming_done.txt"
+            renaming_done = "{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt"
         output:
-            trimmed_read1="{output_dir}/{sample}/results/{sample}_trimmed_R1.fastq.gz",
-            trimmed_read2="{output_dir}/{sample}/results/{sample}_trimmed_R2.fastq.gz" if config["read_type"] == "paired" else None,
-            fastp_done="{output_dir}/{sample}/fastp_done.txt"
+            trimmed_read1 = "{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R1.fastq.gz",
+            trimmed_read2 = "{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R2.fastq.gz" if config["read_type"] == "paired" else None,
+            fastp_done = "{output_dir}/{sample}/snakemake_checkpoints/fastp_done.txt"
         params:
-            fastp_exec=config["executables"]["fastp"],
-            read1=lambda wildcards: f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz",
-            read2_param=lambda wildcards: f"-I {config['input_dir']}/{wildcards.sample}_R2.fastq.gz" if config["read_type"] == "paired" else "",
-            trimmed_read2_param=lambda wildcards: f"-O {wildcards.output_dir}/{wildcards.sample}/results/{wildcards.sample}_trimmed_R2.fastq.gz if config['read_type'] == 'paired' else ''",
-            detect_adapter_for_pe=lambda wildcards: "--detect_adapter_for_pe" if config["read_type"] == "paired" else "",
-            threads=config["fastp_threads"],
-            extra=config.get("fastp_params", "")
+            fastp_exec = config["executables"]["fastp"],
+            read1 = lambda wildcards: f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz",
+            read2_param = lambda wildcards: f"-I {config['input_dir']}/{wildcards.sample}_R2.fastq.gz" if config["read_type"] == "paired" else "",
+            trimmed_read2_param = lambda wildcards: f"-O {wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R2.fastq.gz if config['read_type'] == 'paired' else ''",
+            detect_adapter_for_pe = lambda wildcards: "--detect_adapter_for_pe" if config["read_type"] == "paired" else "",
+            threads = config["fastp_threads"],
+            extra = config.get("fastp_params", "")
         shell:
             """
             {params.fastp_exec} -i {params.read1} \
@@ -130,84 +128,85 @@ if config.get("run_fastp", False):
 else:
     rule fastp_skipped:
         input:
-            renaming_done="{output_dir}/{sample}/renaming_done.txt"
+            renaming_done = "{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt"
         output:
-            fastp_skipped="{output_dir}/{sample}/fastp_skipped.txt"
+            fastp_skipped = "{output_dir}/{sample}/snakemake_checkpoints/fastp_skipped.txt"
         run:
             with open(output.fastp_skipped, "w") as f:
                 f.write("Fastp was skipped for this sample.")
 
-rule fastqc:
+rule fastqc_raw:
     input:
-        renaming_done="{output_dir}/{sample}/renaming_done.txt",
-        fastp_status=lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/fastp_done.txt" if config.get("run_fastp", False) else f"{wildcards.output_dir}/{wildcards.sample}/fastp_skipped.txt"
+        renaming_done = "{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt"
     output:
-        raw_fastqc=[
-            "{output_dir}/{sample}/results/{sample}_R1_fastqc.html",
-            "{output_dir}/{sample}/results/{sample}_R2_fastqc.html"
+        raw_fastqc = [
+            "{output_dir}/{sample}/results/fastqc/{sample}_R1_fastqc.html",
+            "{output_dir}/{sample}/results/fastqc/{sample}_R2_fastqc.html"
         ] if config["fastqc_before_trimming"] and config["read_type"] == "paired" else (
-            ["results/{sample}_raw_R1_fastqc.html"] if config["fastqc_before_trimming"] else []
-        ),
-        trimmed_fastqc=[
-            "{output_dir}/{sample}/results/{sample}_trimmed_R1_fastqc.html",
-            "{output_dir}/{sample}/results/{sample}_trimmed_R2_fastqc.html"
-        ] if config["fastqc_after_trimming"] and config["read_type"] == "paired" else (
-            ["{output_dir}/{sample}/results/{sample}_trimmed_R1_fastqc.html"] if config["fastqc_after_trimming"] else []
+            ["{output_dir}/{sample}/results/fastqc/{sample}_R1_fastqc.html"] if config["fastqc_before_trimming"] else []
         )
     params:
-        raw=lambda wildcards: [
+        raw = lambda wildcards: [
             f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz",
             f"{config['input_dir']}/{wildcards.sample}_R2.fastq.gz"
         ] if config["fastqc_before_trimming"] and config["read_type"] == "paired" else (
             [f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz"] if config["fastqc_before_trimming"] else []
         ),
-        trimmed=lambda wildcards: [
-            f"{wildcards.output_dir}/{wildcards.sample}/results/{wildcards.sample}_trimmed_R1.fastq.gz",
-            f"{wildcards.output_dir}/{wildcards.sample}/results/{wildcards.sample}_trimmed_R2.fastq.gz"
-        ] if config["fastqc_after_trimming"] and config["read_type"] == "paired" else (
-            [f"{wildcards.output_dir}/{wildcards.sample}/results/{wildcards.sample}_trimmed_R1.fastq.gz"] if config["fastqc_after_trimming"] else []
-        ),
-        fastqc_exec=config["executables"]["fastqc"],
-        out_folder=lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/"
-    run:
-        # Concatenate raw and trimmed inputs
-        raw_files = " ".join(params.raw) if params.raw else ""
-        trimmed_files = " ".join(params.trimmed) if params.trimmed else ""
-        # Construct commands for raw and trimmed files
-        raw_command = f"{params.fastqc_exec} {raw_files} -o {params.out_folder}" if raw_files else ""
-        trimmed_command = f"{params.fastqc_exec} {trimmed_files} -o {params.out_folder}" if trimmed_files else ""
+        fastqc_exec = config["executables"]["fastqc"],
+        out_folder = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/fastqc/"
+    shell:
+        """
+        {params.fastqc_exec} {params.raw} -o {params.out_folder}
+        """
 
-        # Execute commands in parallel if both are present
-        if raw_command and trimmed_command:
-            shell(f"{raw_command} & {trimmed_command} & wait")
-        elif raw_command:
-            shell(raw_command)
-        elif trimmed_command:
-            shell(trimmed_command)
+rule fastqc_trimmed:
+    input:
+        fastp_status = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/snakemake_checkpoints/fastp_done.txt" if config.get("run_fastp", False) else f"{wildcards.output_dir}/{wildcards.sample}/snakemake_checkpoints/fastp_skipped.txt"
+    output:
+        trimmed_fastqc = [
+            "{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R1_fastqc.html",
+            "{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R2_fastqc.html"
+        ] if config["fastqc_after_trimming"] and config["read_type"] == "paired" else (
+            ["{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R1_fastqc.html"] if config["fastqc_after_trimming"] else []
+        )
+    params:
+        trimmed = lambda wildcards: [
+            f"{wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R1.fastq.gz",
+            f"{wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R2.fastq.gz"
+        ] if config["fastqc_after_trimming"] and config["read_type"] == "paired" else (
+            [f"{wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R1.fastq.gz"] if config["fastqc_after_trimming"] else []
+        ),
+        fastqc_exec = config["executables"]["fastqc"],
+        out_folder = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/fastqc/"
+    shell:
+        """
+        {params.fastqc_exec} {params.trimmed} -o {params.out_folder}
+        """
+
 
 rule star_mapping:
     input:
-        read1=lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/{wildcards.sample}_trimmed_R1.fastq.gz" if config["run_fastp"] else f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz",
-        read2=lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/{wildcards.sample}_trimmed_R2.fastq.gz" if config["run_fastp"] and config["read_type"] == "paired" else f"{config['input_dir']}/{wildcards.sample}_R2.fastq.gz" if config["read_type"] == "paired" else None
+        read1 = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R1.fastq.gz" if config["run_fastp"] else f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz",
+        read2 = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R2.fastq.gz" if config["run_fastp"] and config["read_type"] == "paired" else f"{config['input_dir']}/{wildcards.sample}_R2.fastq.gz" if config["read_type"] == "paired" else None
     output:
         "{output_dir}/{sample}/results/{sample}_Aligned.sortedByCoord.out.bam"
     threads: config["star_threads"]
     params:
-        tmp_dir=lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/{config.get('temp_dir', 'tmp')}",
-        genome_dir=config.get("star_genome_index", "/path/to/genomeDir"),
-        gtf_file=config.get("annotation_gtf", "/path/to/annotation.gtf"),
-        overhang=config.get("sjdb_overhang", 99),
-        multimap_max=config.get("outFilterMultimapNmax", 50),
-        sorting_threads=config.get("outBAMsortingThreadN", 10),
-        adapter_seq=config.get("clip3AdapterSeq", "CTGTCTCTTATACACATCT"),
-        quant_mode=config.get("quant_mode", "GeneCounts"),
-        star_params=config.get("star_params", ""),
-        star_exec=config["executables"]["star"]
+        tmp_dir = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/{config.get('temp_dir', 'tmp')}",
+        genome_dir = config.get("star_genome_index", "/path/to/genomeDir"),
+        gtf_file = config.get("annotation_gtf", "/path/to/annotation.gtf"),
+        overhang = config.get("sjdb_overhang", 99),
+        multimap_max = config.get("outFilterMultimapNmax", 50),
+        sorting_threads = config.get("outBAMsortingThreadN", 10),
+        adapter_seq = config.get("clip3AdapterSeq", "CTGTCTCTTATACACATCT"),
+        quant_mode = config.get("quant_mode", "GeneCounts"),
+        star_params = config.get("star_params", ""),
+        star_exec = config["executables"]["star"]
     run:
         import shutil
         import os
 
-        # Remove the temporary directory if it already exists
+        # Remove the temporary directory if it already exists, STAR crashes otherwise
         if os.path.exists(params.tmp_dir):
             shutil.rmtree(params.tmp_dir)
             print(f"Removed existing temporary directory: {params.tmp_dir}")
@@ -234,22 +233,41 @@ rule star_mapping:
                  {params.star_params}
             """
         )
+        
+        # Move STAR output files to a STAR_output folder
+        results_dir = f"{wildcards.output_dir}/{wildcards.sample}/results"
+        star_output_dir = os.path.join(results_dir, "STAR_output")
+        os.makedirs(star_output_dir, exist_ok=True)
+
+        star_files = [
+            f"{wildcards.sample}_Log.final.out",
+            f"{wildcards.sample}_Log.out",
+            f"{wildcards.sample}_Log.progress.out",
+            f"{wildcards.sample}_ReadsPerGene.out.tab",
+            f"{wildcards.sample}_SJ.out.tab",
+            f"{wildcards.sample}__STARgenome"
+        ]
+        for file in star_files:
+            src = os.path.join(results_dir, file)
+            dst = os.path.join(star_output_dir, file)
+            if os.path.exists(src):
+                shutil.move(src, dst)
 
 rule featurecounts:
     input:
-        bam=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_Aligned.sortedByCoord.out.bam",
-        saf_creation_done="saf_creation_done.txt" if config["generate_saf"] else "saf_creation_skipped.txt",
-        exon_saf="shared_data/exon_SAF.txt" if config["generate_saf"] else config["exon_saf"],
-        intron_saf="shared_data/intron_SAF.txt" if config["generate_saf"] else config["intron_saf"]
+        bam = lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_Aligned.sortedByCoord.out.bam",
+        saf_creation_status = f"{shared_data_dir}/saf_creation_done.txt" if config["generate_saf"] else f"{shared_data_dir}/saf_creation_skipped.txt",
+        exon_saf = f"{shared_data_dir}/exon_SAF.txt" if config["generate_saf"] else config["exon_saf"],
+        intron_saf = f"{shared_data_dir}/intron_SAF.txt" if config["generate_saf"] else config["intron_saf"]
     output:
-        exon="{output_dir}/{sample}/results/exon/exon_counts.txt",
-        intron="{output_dir}/{sample}/results/intron/intron_counts.txt"
+        exon = "{output_dir}/{sample}/results/exon/exon_counts.txt",
+        intron = "{output_dir}/{sample}/results/intron/intron_counts.txt"
     threads: config.get("featurecounts_threads", 5)
     params:
-        exon_dir="{output_dir}/{sample}/results/exon",
-        intron_dir="{output_dir}/{sample}/results/intron",
-        featurecounts_params=config.get("featurecounts_params", "-p --largestOverlap --primary"),
-        featurecounts_exec=config["executables"]["featurecounts"]
+        exon_dir = "{output_dir}/{sample}/results/exon",
+        intron_dir = "{output_dir}/{sample}/results/intron",
+        featurecounts_params = config.get("featurecounts_params", "-p --largestOverlap --primary"),
+        featurecounts_exec = config["executables"]["featurecounts"]
     shell:
         """
         mkdir -p {params.exon_dir} {params.intron_dir} && \
@@ -260,14 +278,14 @@ rule featurecounts:
 
 rule rename_featurecounts_bam:
     input:
-        exon_counts="{output_dir}/{sample}/results/exon/exon_counts.txt",
-        intron_counts="{output_dir}/{sample}/results/intron/intron_counts.txt",
+        exon_counts = "{output_dir}/{sample}/results/exon/exon_counts.txt",
+        intron_counts = "{output_dir}/{sample}/results/intron/intron_counts.txt",
     output:
-        exon_bam="{output_dir}/{sample}/results/exon/{sample}_exon.bam",
-        intron_bam="{output_dir}/{sample}/results/intron/{sample}_intron.bam"
+        exon_bam = "{output_dir}/{sample}/results/exon/{sample}_exon.bam",
+        intron_bam = "{output_dir}/{sample}/results/intron/{sample}_intron.bam"
     params:
-        exon_dir="{output_dir}/{sample}/results/exon",
-        intron_dir="{output_dir}/{sample}/results/intron"
+        exon_dir = "{output_dir}/{sample}/results/exon",
+        intron_dir = "{output_dir}/{sample}/results/intron"
 
     run:
         from utils import rename_featurecounts_bam
@@ -282,16 +300,16 @@ rule rename_featurecounts_bam:
 
 rule merge_bam:
     input:
-        exon="{output_dir}/{sample}/results/exon/{sample}_exon.bam",
-        intron="{output_dir}/{sample}/results/intron/{sample}_intron.bam"
+        exon = "{output_dir}/{sample}/results/exon/{sample}_exon.bam",
+        intron = "{output_dir}/{sample}/results/intron/{sample}_intron.bam"
     output:
-        merged="{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam",
-        index="{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam.bai"
+        merged = "{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam",
+        index = "{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam.bai"
     params:
-        python_exec=config["executables"]["python"],
-        priority=config.get("merge_priority", "exon"),  # Default priority is "exon"
-        threads=config.get("merge_threads", 10),  # Default threads for sorting
-        index_flag=lambda wildcards: "--index" if config.get("merge_index", True) else "",  # Dynamically set the --index flag
+        python_exec = config["executables"]["python"],
+        priority = config.get("merge_priority", "exon"),  # Default priority is "exon"
+        threads = config.get("merge_threads", 10),  # Default threads for sorting
+        index_flag = lambda wildcards: "--index" if config.get("merge_index", True) else "",  # Dynamically set the --index flag
         log=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_merge_bam.log"
     shell:
         """
@@ -308,34 +326,36 @@ rule merge_bam:
 
 rule quantify_expression:
     input:
-        bam=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_intron_exon_aligned.bam"
+        bam = lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_intron_exon_aligned.bam"
     output:
-        exon_counts="{output_dir}/{sample}/results/{sample}_exon_counts.txt",
-        intron_counts="{output_dir}/{sample}/results/{sample}_intron_counts.txt",
-        combined_counts="{output_dir}/{sample}/results/{sample}_combined_counts.txt",
-        expression_stats="{output_dir}/{sample}/results/{sample}_expression_stats.txt",
+        exon_counts = "{output_dir}/{sample}/results/expression/{sample}_exon_counts.txt",
+        intron_counts = "{output_dir}/{sample}/results/expression/{sample}_intron_counts.txt",
+        combined_counts = "{output_dir}/{sample}/results/expression/{sample}_combined_counts.txt",
+        expression_stats = "{output_dir}/{sample}/results/stats/{sample}_expression_stats.txt",
         log="{output_dir}/{sample}/results/{sample}/results/{sample}_quant.log"
     params:
-        python_exec=config["executables"]["python"],
-        prefix="{output_dir}/{sample}/results/{sample}",
-        threads=config.get("quant_threads", 10)  
+        python_exec = config["executables"]["python"],
+        expression_folder = "{output_dir}/{sample}/results/expression/{sample}",
+        stats_folder = "{output_dir}/{sample}/results/stats/{sample}",
+        threads = config.get("quant_threads", 10)  
     shell:
         """
         {params.python_exec} tools/quantify_expression_generate_stats.py \
             -b {input.bam} \
-            -o {params.prefix} \
+            -e {params.expression_folder} \
+            -s {params.stats_folder} \
             -t {params.threads} \
             --log {output.log}
         """
 # This might need to change from aligned bam to count files.
 rule cleanup:
     input:
-        aligned_bam="{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam"
+        aligned_bam = "{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam"
     output:
-        cleanup_done="{output_dir}/{sample}/cleanup_done.txt"
+        cleanup_done = "{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt"
     params:
-        output_dir=config["output_dir"],
-        sample=lambda wildcards: wildcards.sample
+        output_dir = config["output_dir"],
+        sample = lambda wildcards: wildcards.sample
     run:
         from utils import cleanup_pipeline_results
         cleanup_pipeline_results(params.output_dir, params.sample)
@@ -345,9 +365,9 @@ rule cleanup:
 
 rule revert_renaming:
     input:
-        "{output_dir}/{sample}/cleanup_done.txt"  
+        "{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt"  
     output:
-        reverting_done ="{output_dir}/{sample}/reverting_done.txt"
+        reverting_done = "{output_dir}/{sample}/snakemake_checkpoints/reverting_done.txt"
     params:
         mapping_file = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/renaming_map.json"
     run:
