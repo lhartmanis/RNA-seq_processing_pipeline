@@ -342,7 +342,7 @@ rule quantify_expression:
         intron_counts = "{output_dir}/{sample}/results/expression/{sample}_intron_counts.txt",
         combined_counts = "{output_dir}/{sample}/results/expression/{sample}_combined_counts.txt",
         expression_stats = "{output_dir}/{sample}/results/stats/{sample}_expression_stats.txt",
-        log="{output_dir}/{sample}/results/{sample}/results/{sample}_quant.log"
+        log="{output_dir}/{sample}/results/{sample}_quant.log"
     params:
         python_exec = config["executables"]["python"],
         expression_folder = "{output_dir}/{sample}/results/expression/{sample}",
