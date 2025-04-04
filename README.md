@@ -53,7 +53,7 @@ Edit the `config.yaml` file to include:
 ### **2. Run the Pipeline**
 Run the pipeline using Snakemake:
 ```bash
-snakemake --cores <number_of_cores>
+snakemake --cores <number_of_cores>  --configfile /path/to/your/config.yaml
 ```
 
 ### **3. Capture Logs**
