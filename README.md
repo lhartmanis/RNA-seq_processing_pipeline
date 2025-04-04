@@ -111,7 +111,7 @@ The pipeline generates the following outputs for each sample:
 - `{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R2.fastq.gz` (if paired-end)
 
 ### **Aligned BAM Files**
-- `{output_dir}/{sample}/results/{sample}_Aligned.sortedByCoord.out.bam`
+- `{output_dir}/{sample}/results/alignment/{sample}_Aligned.sortedByCoord.out.bam`
 
 ### **Quantification Results**
 - `{output_dir}/{sample}/results/expression/{sample}_exon_counts.txt`
