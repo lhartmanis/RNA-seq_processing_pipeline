@@ -303,8 +303,8 @@ rule merge_bam:
         exon = "{output_dir}/{sample}/results/exon/{sample}_exon.bam",
         intron = "{output_dir}/{sample}/results/intron/{sample}_intron.bam"
     output:
-        merged = "{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam",
-        index = "{output_dir}/{sample}/results/{sample}_intron_exon_aligned.bam.bai"
+        merged = "{output_dir}/{sample}/results/alignment/{sample}_intron_exon_aligned.bam",
+        index = "{output_dir}/{sample}/results/alignment/{sample}_intron_exon_aligned.bam.bai"
     params:
         python_exec = config["executables"]["python"],
         priority = config.get("merge_priority", "exon"),  # Default priority is "exon"
