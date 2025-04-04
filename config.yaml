@@ -24,6 +24,7 @@ samples:
 # fastqc settings
 fastqc_before_trimming: true  # Run FastQC before trimming
 fastqc_after_trimming: true  # Run FastQC after trimming
+fastqc_mem_mb: 1000  # Memory limit for FastQC in MB
 
 # fastp settings
 fastp_threads: 4  # Number of threads for fastp
@@ -39,6 +40,7 @@ outBAMsortingThreadN: 10  # Default value for BAM sorting threads
 clip3AdapterSeq: "CTGTCTCTTATACACATCT"  # Default adapter sequence
 quant_mode: "GeneCounts"  # Default quantification mode (Check if this is correct!)
 star_params: ""  # Additional custom parameters for STAR (leave empty by default)
+star_mem_mb: 35000 # Memory limit for STAR in MB
 
 # featureCounts settings
 featurecounts_threads: 5  # Number of threads for featureCounts
