@@ -1,6 +1,6 @@
-# RNA-Seq Processing Pipeline
+# RNA-seq Processing Pipeline
 
-This repository contains a Snakemake-based pipeline for processing RNA-Seq data. The pipeline automates tasks such as quality control, read trimming, alignment, feature quantification, and cleanup, making it easy to process RNA-Seq datasets reproducibly and efficiently.
+This repository contains a Snakemake-based pipeline for processing RNA-seq data. The pipeline automates tasks such as quality control, read trimming, alignment and feature quantification, making it easy to process RNA-seq datasets reproducibly and efficiently.
 
 ---
 
@@ -25,9 +25,12 @@ The following software must be installed and available in your `PATH`:
 - [STAR](https://github.com/alexdobin/STAR)
 - [featureCounts](http://subread.sourceforge.net/)
 - Python 3.x:
+    - pyranges
+    - pandas
+    - numpy
 
 ### **Input Files**
-- Paired-end or single-end FASTQ files in the format `{sample}_R1.fastq.gz` and `{sample}_R2.fastq.gz` (for paired-end reads).
+- Paired-end or single-end FASTQ files are placed in the `input dir` folder and named according to: `{sample}_R1.fastq.gz` and `{sample}_R2.fastq.gz` (for paired-end reads). 
 - Reference genome index for STAR.
 
 ## **Installation**
@@ -62,10 +65,10 @@ snakemake --cores <number_of_cores> > pipeline.log 2>&1
 1. **Renaming Files:** Renames input FASTQ files to a standardized format.
 2. **Quality Control:** Runs FastQC on raw reads.
 3. **Read Trimming:** Trims adapters and filters low-quality reads using `fastp`.
-4. **Alignment:** Aligns reads to the reference genome using STAR.
+4. **Alignment:** Aligns trimmed reads to the reference genome using STAR.
 5. **Feature Quantification:** Quantifies exon and intron counts using featureCounts.
 6. **BAM Merging:** Merges exon and intron BAM files into a single BAM file.
-7. **Expression Quantification:** Generates combined expression statistics.
+7. **Expression Quantification:** Generates combined expression statistics to account for exonic and intronic mapping reads.
 8. **Cleanup:** Removes intermediate files to save disk space.
 9. **Reverting Renaming:** Reverts renamed files to their original names.
 
@@ -98,23 +101,23 @@ executables:
 The pipeline generates the following outputs for each sample:
 
 ### **Quality Control Reports**
-- `{output_dir}/{sample}/results/{sample}_R1_fastqc.html`
-- `{output_dir}/{sample}/results/{sample}_R2_fastqc.html` (if paired-end)
-- `{output_dir}/{sample}/results/{sample}_trimmed_R1_fastqc.html`
-- `{output_dir}/{sample}/results/{sample}_trimmed_R2_fastqc.html` (if paired-end)
+- `{output_dir}/{sample}/results/fastqc/{sample}_R1_fastqc.html`
+- `{output_dir}/{sample}/results/fastqc/{sample}_R2_fastqc.html` (if paired-end)
+- `{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R1_fastqc.html`
+- `{output_dir}/{sample}/results/fsatqc/{sample}_trimmed_R2_fastqc.html` (if paired-end)
 
 ### **Trimmed Reads**
-- `{output_dir}/{sample}/results/{sample}_trimmed_R1.fastq.gz`
-- `{output_dir}/{sample}/results/{sample}_trimmed_R2.fastq.gz` (if paired-end)
+- `{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R1.fastq.gz`
+- `{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R2.fastq.gz` (if paired-end)
 
 ### **Aligned BAM Files**
 - `{output_dir}/{sample}/results/{sample}_Aligned.sortedByCoord.out.bam`
 
 ### **Quantification Results**
-- `{output_dir}/{sample}/results/{sample}_exon_counts.txt`
-- `{output_dir}/{sample}/results/{sample}_intron_counts.txt`
-- `{output_dir}/{sample}/results/{sample}_combined_counts.txt`
-- `{output_dir}/{sample}/results/{sample}_expression_stats.txt`
+- `{output_dir}/{sample}/results/expression/{sample}_exon_counts.txt`
+- `{output_dir}/{sample}/results/expression/{sample}_intron_counts.txt`
+- `{output_dir}/{sample}/results/expression/{sample}_combined_counts.txt`
+- `{output_dir}/{sample}/results/stats/{sample}_expression_stats.txt`
 
 ### **Cleanup and Logs**
 - `{output_dir}/{sample}/cleanup_done.txt`
