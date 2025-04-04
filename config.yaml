@@ -14,11 +14,6 @@ input_dir: "data"
 output_dir: "output"
 temp_dir: "tmp"
 
-# Input files
-input_files:
-  r1: "data/sample_R1.fastq.gz"  # Required for both single-end & paired-end
-  r2: "data/sample_R2.fastq.gz"  # Only required for paired-end
-
 # fastqc settings
 fastqc_before_trimming: true  # Run FastQC before trimming
 fastqc_after_trimming: true  # Run FastQC after trimming
