@@ -14,6 +14,13 @@ input_dir: "data"
 output_dir: "output"
 temp_dir: "tmp"
 
+# Samples. Either list of sample names or a file containing sample names.
+# If both are provided, the file will take precedence.
+samples_file: "samples.txt"  # Path to a file containing sample names (one per line). 
+samples:
+  - sample1
+  - sample2
+
 # fastqc settings
 fastqc_before_trimming: true  # Run FastQC before trimming
 fastqc_after_trimming: true  # Run FastQC after trimming
@@ -38,7 +45,6 @@ featurecounts_threads: 5  # Number of threads for featureCounts
 generate_saf: true
 exon_saf: "/path/to/exon_SAF"  # Path to SAF file for exon mode
 intron_saf: "/path/to/intron_SAF"  # Path to SAF file for intron mode
-gene_lengths: "{output_dir}/gene_lengths.txt" # Path to gene lengths file
 featurecounts_params: "-p --largestOverlap --primary"  # Additional custom parameters for featureCounts
 
 # Merge BAM settings
