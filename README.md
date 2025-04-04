@@ -1,14 +1,14 @@
-# RNA-seq Processing Pipeline
+# RNA-seq processing pipeline
 
 This repository contains a Snakemake-based pipeline for processing RNA-seq data. The pipeline automates tasks such as quality control, read trimming, alignment and feature quantification, making it easy to process RNA-seq datasets reproducibly and efficiently.
 
 ---
 
 ## **Features**
-- **Quality Control:** Runs FastQC before and after trimming.
+- **Quality Control:** Runs `FastQC` before and after trimming.
 - **Read Trimming:** Uses `fastp` for adapter trimming and quality filtering.
-- **Alignment:** Aligns reads to a reference genome using STAR.
-- **Feature Quantification:** Quantifies exon and intron counts using featureCounts.
+- **Alignment:** Aligns reads to a reference genome using `STAR`.
+- **Feature Quantification:** Quantifies exon and intron counts using `featureCounts`.
 - **BAM Merging:** Merges exon and intron BAM files into a single file.
 - **Expression Quantification:** Generates combined expression statistics.
 - **Cleanup:** Removes intermediate files to save disk space.
@@ -26,6 +26,7 @@ The following software must be installed and available in your `PATH`:
 - [featureCounts](http://subread.sourceforge.net/)
 - Python 3.x:
     - pyranges
+    - pysam
     - pandas
     - numpy
 
