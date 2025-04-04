@@ -14,10 +14,6 @@ input_dir: "data"
 output_dir: "output"
 temp_dir: "tmp"
 
-samples:
-  - sample1
-  - sample2
-
 # Input files
 input_files:
   r1: "data/sample_R1.fastq.gz"  # Required for both single-end & paired-end
