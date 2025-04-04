@@ -114,7 +114,7 @@ def merge_counts(results):
     
     return exon_counts, intron_counts, combined_counts, stats
 
-def quantify_expression_parallel(bam_path, output_prefix, num_threads):
+def quantify_expression_parallel(bam_path, expression_folder, stats_folder, num_threads):
     """Quantify expression from a merged BAM file using multiprocessing."""
     logging.info("Starting parallel expression quantification...")
     bam = pysam.AlignmentFile(bam_path, "rb")
@@ -135,22 +135,22 @@ def quantify_expression_parallel(bam_path, output_prefix, num_threads):
     stats["intergenic"] = stats.pop("Unassigned_NoFeatures")
     
     # Write output files
-    with open(f"{output_prefix}_exon_counts.txt", "w") as f:
+    with open(f"{expression_folder}_exon_counts.txt", "w") as f:
         f.write("GeneID\tCount\n")
         for gene, count in exon_counts.items():
             f.write(f"{gene}\t{count}\n")
     
-    with open(f"{output_prefix}_intron_counts.txt", "w") as f:
+    with open(f"{expression_folder}_intron_counts.txt", "w") as f:
         f.write("GeneID\tCount\n")
         for gene, count in intron_counts.items():
             f.write(f"{gene}\t{count}\n")
     
-    with open(f"{output_prefix}_combined_counts.txt", "w") as f:
+    with open(f"{expression_folder}_combined_counts.txt", "w") as f:
         f.write("GeneID\tCount\n")
         for gene, count in combined_counts.items():
             f.write(f"{gene}\t{count}\n")
     
-    with open(f"{output_prefix}_expression_stats.txt", "w") as f:
+    with open(f"{stats_folder}_expression_stats.txt", "w") as f:
         f.write("Category\tCount\n")
         for category, count in stats.items():
             f.write(f"{category}\t{count}\n")
@@ -160,11 +160,12 @@ def quantify_expression_parallel(bam_path, output_prefix, num_threads):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Quantify expression from a merged BAM file using multiprocessing.")
     parser.add_argument("-b", "--bam", required=True, help="Path to merged BAM file")
-    parser.add_argument("-o", "--output", required=True, help="Prefix for output count matrix files")
+    parser.add_argument("-e", "--expression_folder", required=True, help="Path to output expression folder")
+    parser.add_argument("-s", "--stats_folder", required=True, help="Path to output stats folder")
     parser.add_argument("-t", "--threads", type=int, default=multiprocessing.cpu_count(), help="Number of threads to use (default: all available cores)")
     parser.add_argument("--log", default="quantify_expression.log", help="Log file name (default: quantify_expression.log)")
     args = parser.parse_args()
     
     setup_logging(args.log)
-    quantify_expression_parallel(args.bam, args.output, args.threads)
+    quantify_expression_parallel(args.bam, args.expression_folder, args.stats_folder, args.threads)
 
