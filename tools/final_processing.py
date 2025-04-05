@@ -5,13 +5,14 @@ import json
 from collections import defaultdict
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from tools.pipeline_utils import parse_memory_logs, create_stats_df, calculate_rpkm, calculate_tpm
-from tools.plotting_utils import plot_runtimes, plot_memory_usage, plot_cpu_usage, plot_readstats
 
 # Add the parent directory to the system path
 # This allows us to import modules from the parent directory
 # without needing to install them as packages.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tools.pipeline_utils import parse_memory_logs, create_stats_df, calculate_rpkm, calculate_tpm
+from tools.plotting_utils import plot_runtimes, plot_memory_usage, plot_cpu_usage, plot_readstats
+
 
 def process_pipeline_results(output_dir, samples, gene_lengths_path):
     """
