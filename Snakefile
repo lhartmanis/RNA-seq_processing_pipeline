@@ -59,7 +59,7 @@ rule all:
         expand("{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         expand("{output_dir}/{sample}/snakemake_checkpoints/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         # Final report output
-        "{output_dir}/combined_results/plots/pipeline_stats/command_runtimes.pdf"
+         expand("{output_dir}/combined_results/plots/pipeline_stats/command_runtimes.pdf", output_dir=config["output_dir"])
 
 rule generate_saf_and_gene_lengths:
     output:
@@ -427,7 +427,7 @@ rule generate_final_report:
     input:
         expand("{output_dir}/{sample}/results/expression/{sample}_combined_counts.txt", sample=config["samples"], output_dir=config["output_dir"])
     output:
-        "{output_dir}/combined_results/plots/pipeline_stats/command_runtimes.pdf"
+        expand("{output_dir}/combined_results/plots/pipeline_stats/command_runtimes.pdf", output_dir=config["output_dir"])
     params:
         script = "tools/final_processing.py",
         output_dir = config["output_dir"],
