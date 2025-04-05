@@ -1,4 +1,5 @@
-import os, re
+import os, re, sys
+import argparse
 import pandas as pd
 import json
 from collections import defaultdict
@@ -6,6 +7,11 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from tools.pipeline_utils import parse_memory_logs, create_stats_df, calculate_rpkm, calculate_tpm
 from tools.plotting_utils import plot_runtimes, plot_memory_usage, plot_cpu_usage, plot_readstats
+
+# Add the parent directory to the system path
+# This allows us to import modules from the parent directory
+# without needing to install them as packages.
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def process_pipeline_results(output_dir, samples, gene_lengths_path):
     """
@@ -144,3 +150,12 @@ def process_pipeline_results(output_dir, samples, gene_lengths_path):
     plot_memory_usage(mem_usage_df, pipeline_stats_plot_path, cmap, norm, colormap)
     plot_cpu_usage(cpu_df, pipeline_stats_plot_path, cmap, norm, colormap)
     plot_readstats(pd.concat(stats_list, axis=0), readstats_plot_path)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process RNA-seq pipeline results.")
+    parser.add_argument("--output-dir", required=True, help="Base output directory for the pipeline.")
+    parser.add_argument("--samples", required=True, nargs="+", help="List of sample names.")
+    parser.add_argument("--gene-lengths", required=True, help="Path to the gene lengths file.")
+    args = parser.parse_args()
+
+    process_pipeline_results(args.output_dir, args.samples, args.gene_lengths)
