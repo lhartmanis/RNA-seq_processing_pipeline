@@ -111,7 +111,7 @@ def calculate_rpkm(counts, gene_length_df):
     3. Normalizes raw counts by exon length (RPK: Reads Per Kilobase).
     4. Divides RPK values by the total counts per million to compute RPKM.
     """
-    exon_kb = gene_lengths.exon_length / 1000
+    exon_kb = gene_length_df.exon_length / 1000
     sample_count_per_million = counts.sum(0) / 1e6
     rpk = counts.div(exon_kb, axis = 0).dropna(how = "all")
     rpkm = rpk.div(sample_count_per_million, axis = 1)
