@@ -21,14 +21,15 @@ samples:
   - sample1
   - sample2
 
+# fastp settings
+fastp_threads: 4  # Number of threads for fastp
+fastp_params: ""  # Additional custom parameters for fastp (leave empty by default)
+fastqc_mem_mb: 2000  # Memory limit for fastp in MB
+
 # fastqc settings
 fastqc_before_trimming: true  # Run FastQC before trimming
 fastqc_after_trimming: true  # Run FastQC after trimming
 fastqc_mem_mb: 1000  # Memory limit for FastQC in MB
-
-# fastp settings
-fastp_threads: 4  # Number of threads for fastp
-fastp_params: ""  # Additional custom parameters for fastp (leave empty by default)
 
 # STAR settings
 star_threads: 10  # Number of threads for STAR
@@ -40,7 +41,7 @@ outBAMsortingThreadN: 10  # Default value for BAM sorting threads
 clip3AdapterSeq: "CTGTCTCTTATACACATCT"  # Default adapter sequence
 quant_mode: "GeneCounts"  # Default quantification mode (Check if this is correct!)
 star_params: ""  # Additional custom parameters for STAR (leave empty by default)
-star_mem_mb: 35000 # Memory limit for STAR in MB
+star_mem_mb: 37000 # Memory limit for STAR in MB
 
 # featureCounts settings
 featurecounts_threads: 5  # Number of threads for featureCounts
@@ -48,11 +49,13 @@ generate_saf: true
 exon_saf: "/path/to/exon_SAF"  # Path to SAF file for exon mode
 intron_saf: "/path/to/intron_SAF"  # Path to SAF file for intron mode
 featurecounts_params: "-p --largestOverlap --primary"  # Additional custom parameters for featureCounts
+featurecounts_mem_mb: 300 # Memory limit for featureCounts in MB
 
 # Merge BAM settings
 merge_priority: "exon"  # Default priority for merging (exon or intron)
 merge_threads: 10  # Number of threads for sorting
 merge_index: true  # Whether to index the output BAM file
+merge_mem_mb: 10000  # Memory limit for merging in MB
 
 # Quantification and stats settings
 quant_threads: 10  # Number of threads for quantification and stats
