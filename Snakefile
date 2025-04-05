@@ -58,6 +58,8 @@ rule all:
         # Cleanup and reverting outputs
         expand("{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         expand("{output_dir}/{sample}/snakemake_checkpoints/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"])
+        # Final report output
+        "{output_dir}/combined_results/plots/pipeline_stats/command_runtimes.pdf"
 
 rule generate_saf_and_gene_lengths:
     output:
@@ -367,7 +369,6 @@ rule merge_bam:
             {params.index_flag} \
             --log {params.log}
         """
-
 rule quantify_expression:
     input:
         bam = lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/alignment/{wildcards.sample}_intron_exon_aligned.bam"
@@ -421,3 +422,18 @@ rule revert_renaming:
         revert_renaming(params.mapping_file)
         with open(output.reverting_done, "w") as f:
             f.write("Reverting renaming completed.")
+
+rule generate_final_report:
+    input:
+        expand("{output_dir}/{sample}/results/expression/{sample}_combined_counts.txt", sample=config["samples"], output_dir=config["output_dir"])
+    output:
+        "{output_dir}/combined_results/plots/pipeline_stats/command_runtimes.pdf"
+    params:
+        script = "tools/final_processing.py",
+        output_dir = config["output_dir"],
+        gene_lengths = f"{shared_data_dir}/gene_lengths.txt",
+        samples = config["samples"]
+    shell:
+        """
+        python {params.script} --output-dir {params.output_dir} --samples {params.samples} --gene-lengths {params.gene_lengths}
+        """

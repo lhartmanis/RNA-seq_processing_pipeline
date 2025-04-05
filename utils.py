@@ -155,6 +155,12 @@ def cleanup_pipeline_results(output_dir, sample_name):
             os.remove(file_path)
             print(f"Removed file: {file_path}")
 
+    for file in os.listdir(os.path.join(sample_results_dir, "alignment")):
+        if "Aligned.sortedByCoord.out.bam" in file:
+            file_path = os.path.join(sample_results_dir, "alignment", file)
+            os.remove(file_path)
+            print(f"Removed file: {file_path}")
+
     # Remove the temporary directory
     if os.path.exists(tmp_dir):
         shutil.rmtree(tmp_dir)

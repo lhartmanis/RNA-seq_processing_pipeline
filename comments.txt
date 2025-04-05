@@ -1,0 +1,3 @@
+The Sjdb overhang parameter gets specified in STAR genome generate and can lead to potential problems when mapping reads with different read lengths. Ideally, one would generate a new genome for each run, but Alex Dobin recommends against this, since the effects will be marginal. For more information read github issue below
+
+https://github.com/alexdobin/STAR/issues/931
