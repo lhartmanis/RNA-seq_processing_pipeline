@@ -57,7 +57,7 @@ rule all:
         expand("{output_dir}/{sample}/results/alignment/{sample}_intron_exon_aligned.bam", sample=config["samples"], output_dir=config["output_dir"]),
         # Cleanup and reverting outputs
         expand("{output_dir}/{sample}/snakemake_checkpoints/cleanup_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
-        expand("{output_dir}/{sample}/snakemake_checkpoints/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"])
+        expand("{output_dir}/{sample}/snakemake_checkpoints/reverting_done.txt", sample=config["samples"], output_dir=config["output_dir"]),
         # Final report output
         "{output_dir}/combined_results/plots/pipeline_stats/command_runtimes.pdf"
 
