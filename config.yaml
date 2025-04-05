@@ -32,7 +32,7 @@ fastqc_after_trimming: true  # Run FastQC after trimming
 fastqc_mem_mb: 1000  # Memory limit for FastQC in MB
 
 # STAR settings
-star_threads: 10  # Number of threads for STAR
+star_threads: 8  # Number of threads for STAR
 star_genome_index: "/path/to/genomeDir"  # Path to STAR genome index
 annotation_gtf: "/path/to/annotation.gtf"  # Path to GTF file
 sjdb_overhang: 99  # Default value for sjdbOverhang
@@ -58,7 +58,7 @@ merge_index: true  # Whether to index the output BAM file
 merge_mem_mb: 10000  # Memory limit for merging in MB
 
 # Quantification and stats settings
-quant_threads: 10  # Number of threads for quantification and stats
+quant_threads: 4  # Number of threads for quantification and stats
 
 # Cleanup settings
 cleanup_intermediates: false  # Whether to clean up intermediate files
