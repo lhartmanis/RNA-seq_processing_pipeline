@@ -22,7 +22,7 @@ def plot_runtimes(runtime_df, out_path, cmap, norm, colormap):
     ax.set_yticklabels(input_df.index.values)
     
     sns.despine()
-    plt.savefig(os.path.join(out_path, "command_runtimes.pdf"))
+    plt.savefig(os.path.join(out_path, "command_runtimes.pdf"), bbox_inches = 'tight')
 
 def plot_memory_usage(mem_usage_df, out_path, cmap, norm, colormap):
     fig, ax = plt.subplots()
@@ -43,7 +43,7 @@ def plot_memory_usage(mem_usage_df, out_path, cmap, norm, colormap):
     ax.set_yticklabels(input_df.index.values)
 
     sns.despine()
-    plt.savefig(os.path.join(out_path, "command_memusage.pdf"))
+    plt.savefig(os.path.join(out_path, "command_memusage.pdf"), bbox_inches = 'tight')
 
 def plot_cpu_usage(cpu_df, out_path, cmap, norm, colormap):
     fig, ax = plt.subplots()
@@ -65,7 +65,7 @@ def plot_cpu_usage(cpu_df, out_path, cmap, norm, colormap):
     ax.set_yticklabels(input_df.index.values)
 
     sns.despine()
-    plt.savefig(os.path.join(out_path, "command_cpuusage.pdf"))
+    plt.savefig(os.path.join(out_path, "command_cpuusage.pdf"), bbox_inches = 'tight')
 
 def plot_readstats(combined_stats_df, plot_path):
     fig, axes = plt.subplots(2, 2, figsize = (10, 10))
@@ -96,4 +96,4 @@ def plot_readstats(combined_stats_df, plot_path):
     fig.suptitle("Combined readstats for all samples")
     
     sns.despine()
-    plt.savefig(os.path.join(plot_path, "readstats.pdf"))
+    plt.savefig(os.path.join(plot_path, "readstats.pdf"), bbox_inches = 'tight')
