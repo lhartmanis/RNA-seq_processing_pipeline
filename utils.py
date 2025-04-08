@@ -52,10 +52,7 @@ def rename_files(input_dir, samples, mapping_file):
         samples (list): List of sample names.
         mapping_file (str): Path to save the renaming map as a JSON file.
     """
-    files = os.listdir(input_dir)
-    renaming_map = {}
-
-    def rename_file(orig_filename, new_filename, input_dir, renaming_map):
+    def rename_file(orig_filename, new_filename, input_dir, renaming_map, mapping_file):
         """
         Helper function to rename a file and update the renaming map.
 
@@ -70,7 +67,12 @@ def rename_files(input_dir, samples, mapping_file):
         print(f"Renaming: {old_path} -> {new_path}")
         os.rename(old_path, new_path)
         renaming_map[orig_filename] = new_filename
-        return renaming_map
+        # Save the renaming map to a JSON file
+        with open(mapping_file, "w") as f:
+            json.dump(renaming_map, f, indent=4)
+
+    files = os.listdir(input_dir)
+    renaming_map = {}
 
     # Iterate over files in the input directory
     for sample in samples:
@@ -81,21 +83,17 @@ def rename_files(input_dir, samples, mapping_file):
         elif len(sample_files) == 1:
             r1_file = sample_files[0]
             new_filename = f"{sample}_R1.fastq.gz"
-            rename_file(r1_file, new_filename, input_dir, renaming_map)
+            rename_file(r1_file, new_filename, input_dir, renaming_map, mapping_file)
         elif len(sample_files) == 2:
             r1_file = [i for i in sample_files if "R1" in i][0]
             r2_file = [i for i in sample_files if "R2" in i][0]
             new_r1 = f"{sample}_R1.fastq.gz"
             new_r2 = f"{sample}_R2.fastq.gz"
-            rename_file(r1_file, new_r1, input_dir, renaming_map)
-            rename_file(r2_file, new_r2, input_dir, renaming_map)
+            rename_file(r1_file, new_r1, input_dir, renaming_map, mapping_file)
+            rename_file(r2_file, new_r2, input_dir, renaming_map, mapping_file)
         else:
             print(f"Too many files detected for sample {sample}. Please concatenate sample files before running pipeline.")
             break
-
-    # Save the renaming map to a JSON file
-    with open(mapping_file, "w") as f:
-        json.dump(renaming_map, f, indent=4)
 
     print(f"Renaming completed. Mapping saved to {mapping_file}.")
 
