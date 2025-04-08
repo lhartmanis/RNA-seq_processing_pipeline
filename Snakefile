@@ -101,19 +101,38 @@ rule generate_saf_and_gene_lengths:
             with open(output.saf_creation_status, "w") as f:
                 f.write("SAF creation skipped.\n")
 
+#rule rename_files:
+#    input:
+#        # Ensure the input directory exists
+#        directory = config["input_dir"]
+#    output:
+#        renaming_done ="{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt",
+#        mapping_file = "{output_dir}/{sample}/renaming_map.json"
+#    run:
+#        from utils import rename_files
+#        # Perform renaming for the sample
+#        rename_files(
+#            input_dir = input.directory,
+#            config_file = "config.yaml",
+#            mapping_file = output.mapping_file
+#        )
+#        # Touch the renaming_done.txt file to indicate completion
+#        with open(output.renaming_done, "w") as f:
+#            f.write("Done renaming files!")
+
 rule rename_files:
     input:
         # Ensure the input directory exists
         directory = config["input_dir"]
     output:
-        renaming_done ="{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt",
+        renaming_done = "{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt",
         mapping_file = "{output_dir}/{sample}/renaming_map.json"
     run:
         from utils import rename_files
         # Perform renaming for the sample
         rename_files(
             input_dir = input.directory,
-            config_file = "config.yaml",
+            samples = config["samples"],  # Pass the samples list directly
             mapping_file = output.mapping_file
         )
         # Touch the renaming_done.txt file to indicate completion

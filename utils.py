@@ -3,39 +3,95 @@ import time
 from datetime import datetime
 import subprocess
 
-def rename_files(input_dir, config_file, mapping_file):
+#def rename_files(input_dir, config_file, mapping_file):
+#    """
+#    Renames files in the input directory based on the sample name and metadata.
+#
+#    Args:
+#        input_dir (str): Path to the input directory containing FASTQ files.
+#        config_file (str): Path to the configuration file.
+#        mapping_file (str): Path to save the renaming map as a JSON file.
+#    """
+#    # Define a regex pattern to match filenames with metadata
+#    #pattern = re.compile(r"(?P<sample>[^_]+)_(?P<meta>[^_]+)_R(?P<read>[12])_(?P<more_meta>.+)\.fastq\.gz")
+#    pattern = re.compile(r"(?P<sample>[^_]+)(?:_(?P<meta>[^_]+))?_R(?P<read>[12])(?:_(?P<more_meta>.+))?\.fastq\.gz")
+#    # Dictionary to store the renaming map
+#    renaming_map = {}
+#
+#    # Iterate over files in the input directory
+#    for filename in os.listdir(input_dir):
+#        match = pattern.match(filename)
+#        if match:
+#            # Extract components from the filename
+#            sample = match.group("sample")
+#            read = match.group("read")
+#
+#            # Construct the new filename
+#            new_filename = f"{sample}_R{read}.fastq.gz"
+#
+#            # Rename the file
+#            old_path = os.path.join(input_dir, filename)
+#            new_path = os.path.join(input_dir, new_filename)
+#            os.rename(old_path, new_path)
+#
+#            # Update the renaming map
+#            renaming_map[filename] = new_filename
+#
+#    # Save the renaming map to a JSON file
+#    with open(mapping_file, "w") as f:
+#        json.dump(renaming_map, f, indent=4)
+#
+#    print(f"Renaming completed. Mapping saved to {mapping_file}.")
+
+def rename_files(input_dir, samples, mapping_file):
     """
     Renames files in the input directory based on the sample name and metadata.
 
     Args:
         input_dir (str): Path to the input directory containing FASTQ files.
-        config_file (str): Path to the configuration file.
+        samples (list): List of sample names.
         mapping_file (str): Path to save the renaming map as a JSON file.
     """
-    # Define a regex pattern to match filenames with metadata
-    pattern = re.compile(r"(?P<sample>[^_]+)_(?P<meta>[^_]+)_R(?P<read>[12])_(?P<more_meta>.+)\.fastq\.gz")
-
-    # Dictionary to store the renaming map
+    files = os.listdir(input_dir)
     renaming_map = {}
 
+    def rename_file(orig_filename, new_filename, input_dir, renaming_map):
+        """
+        Helper function to rename a file and update the renaming map.
+
+        Args:
+            orig_filename (str): Original filename.
+            new_filename (str): New filename.
+            input_dir (str): Directory containing the files.
+            renaming_map (dict): Dictionary to store the renaming map.
+        """
+        old_path = os.path.join(input_dir, orig_filename)
+        new_path = os.path.join(input_dir, new_filename)
+        print(f"Renaming: {old_path} -> {new_path}")
+        os.rename(old_path, new_path)
+        renaming_map[orig_filename] = new_filename
+        return renaming_map
+
     # Iterate over files in the input directory
-    for filename in os.listdir(input_dir):
-        match = pattern.match(filename)
-        if match:
-            # Extract components from the filename
-            sample = match.group("sample")
-            read = match.group("read")
-
-            # Construct the new filename
-            new_filename = f"{sample}_R{read}.fastq.gz"
-
-            # Rename the file
-            old_path = os.path.join(input_dir, filename)
-            new_path = os.path.join(input_dir, new_filename)
-            os.rename(old_path, new_path)
-
-            # Update the renaming map
-            renaming_map[filename] = new_filename
+    for sample in samples:
+        sample_files = [i for i in files if sample in i]
+        if len(sample_files) == 0:
+            print(f"No input files found for sample: {sample}, continuing")
+            continue
+        elif len(sample_files) == 1:
+            r1_file = sample_files[0]
+            new_filename = f"{sample}_R1.fastq.gz"
+            rename_file(r1_file, new_filename, input_dir, renaming_map)
+        elif len(sample_files) == 2:
+            r1_file = [i for i in sample_files if "R1" in i][0]
+            r2_file = [i for i in sample_files if "R2" in i][0]
+            new_r1 = f"{sample}_R1.fastq.gz"
+            new_r2 = f"{sample}_R2.fastq.gz"
+            rename_file(r1_file, new_r1, input_dir, renaming_map)
+            rename_file(r2_file, new_r2, input_dir, renaming_map)
+        else:
+            print(f"Too many files detected for sample {sample}. Please concatenate sample files before running pipeline.")
+            break
 
     # Save the renaming map to a JSON file
     with open(mapping_file, "w") as f:
