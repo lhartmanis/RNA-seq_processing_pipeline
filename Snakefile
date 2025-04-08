@@ -127,13 +127,16 @@ rule rename_files:
     output:
         renaming_done = "{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt",
         mapping_file = "{output_dir}/{sample}/renaming_map.json"
+    params:
+        target_sample = lambda wildcards: wildcards.sample
     run:
         from utils import rename_files
         # Perform renaming for the sample
         rename_files(
             input_dir = input.directory,
             samples = config["samples"],  # Pass the samples list directly
-            mapping_file = output.mapping_file
+            mapping_file = output.mapping_file,
+            target_sample = params.target_sample
         )
         # Touch the renaming_done.txt file to indicate completion
         with open(output.renaming_done, "w") as f:

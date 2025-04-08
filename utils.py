@@ -43,7 +43,7 @@ import subprocess
 #
 #    print(f"Renaming completed. Mapping saved to {mapping_file}.")
 
-def rename_files(input_dir, samples, mapping_file):
+def rename_files(input_dir, samples, mapping_file, target_sample):
     """
     Renames files in the input directory based on the sample name and metadata.
 
@@ -76,6 +76,9 @@ def rename_files(input_dir, samples, mapping_file):
 
     # Iterate over files in the input directory
     for sample in samples:
+        if sample != target_sample:
+            continue
+        # Find files matching the sample name
         sample_files = [i for i in files if sample in i]
         if len(sample_files) == 0:
             print(f"No input files found for sample: {sample}, continuing")
