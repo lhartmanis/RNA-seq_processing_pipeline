@@ -66,7 +66,7 @@ def rename_files(input_dir, samples, mapping_file, target_sample):
         new_path = os.path.join(input_dir, new_filename)
         print(f"Renaming: {old_path} -> {new_path}")
         os.rename(old_path, new_path)
-        renaming_map[orig_filename] = new_filename
+        renaming_map[old_path] = new_path
         # Save the renaming map to a JSON file
         with open(mapping_file, "w") as f:
             json.dump(renaming_map, f, indent=4)
