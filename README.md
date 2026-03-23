@@ -30,6 +30,15 @@ The following software must be installed and available in your `PATH`:
     - pandas
     - numpy
 
+In adition, this pipeline requres **GNU time** for resource logging.
+
+#### **Install via conda (recommended)**
+```conda install -c conda-forge time```
+#### **Verify Installation**
+```time --version```
+
+Then add the resulting path to your ```config.yaml``` file.
+
 ### **Input Files**
 - Paired-end or single-end FASTQ files are placed in the `input_dir` folder and named according to: `{sample}_R1.fastq.gz` and `{sample}_R2.fastq.gz` (for paired-end reads). 
 - Reference genome index for STAR.
