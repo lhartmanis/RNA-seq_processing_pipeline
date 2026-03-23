@@ -105,6 +105,7 @@ executables:
   star: "STAR"
   featurecounts: "featureCounts"
   python: "python3"
+  gnu_time: "/path/to/conda/env/bin/time"
 ```
 
 ## **Output**
