@@ -30,7 +30,7 @@ The following software must be installed and available in your `PATH`:
     - pandas
     - numpy
 
-In adition, this pipeline requres **GNU time** for resource logging.
+In addition, this pipeline requires **GNU time** for resource logging.
 
 #### **Install via conda (recommended)**
 ```conda install -c conda-forge time```
@@ -115,7 +115,7 @@ The pipeline generates the following outputs for each sample:
 - `{output_dir}/{sample}/results/fastqc/{sample}_R1_fastqc.html`
 - `{output_dir}/{sample}/results/fastqc/{sample}_R2_fastqc.html` (if paired-end)
 - `{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R1_fastqc.html` (if fastp is run)
-- `{output_dir}/{sample}/results/fsatqc/{sample}_trimmed_R2_fastqc.html` (if fastp is run and paired-end)
+- `{output_dir}/{sample}/results/fastqc/{sample}_trimmed_R2_fastqc.html` (if fastp is run and paired-end)
 
 ### **Trimmed Reads**
 - `{output_dir}/{sample}/results/trimmed_fastq/{sample}_trimmed_R1.fastq.gz` (if fastp is run)
