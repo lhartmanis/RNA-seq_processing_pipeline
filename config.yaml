@@ -24,7 +24,7 @@ samples:
 # fastp settings
 fastp_threads: 4  # Number of threads for fastp
 fastp_params: ""  # Additional custom parameters for fastp (leave empty by default)
-fastqc_mem_mb: 2000  # Memory limit for fastp in MB
+fastp_mem_mb: 2000  # Memory limit for fastp in MB
 
 # fastqc settings
 fastqc_before_trimming: true  # Run FastQC before trimming
