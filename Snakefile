@@ -1,4 +1,4 @@
-import time
+import time, os
 from datetime import datetime
 import shutil
 from utils import check_executable, log_message, log_pipeline_runtime, log_software_versions, ensure_directories_exist, find_bam_file, cleanup_pipeline_results
@@ -75,7 +75,8 @@ rule generate_saf_and_gene_lengths:
         script = "tools/generate_saf_and_gene_lengths.py",
         python_exec = config["executables"]["python"],
         saf_flag = "-s" if config["generate_saf"] else "",
-        log_file = f"{shared_data_dir}/generate_saf_memory_log.txt"
+        log_file = f"{shared_data_dir}/generate_saf_memory_log.txt",
+        time_exec = config["executables"]["gnu_time"]
     run:        
         if params.generate_saf:
             # Touch the "saf_creation_started.txt" file
@@ -85,7 +86,7 @@ rule generate_saf_and_gene_lengths:
             # Run the SAF and gene lengths generation script
             shell(
                 """
-                /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+                {params.time_exec} -v -o {params.log_file} \
                 {params.python_exec} {params.script} \
                     -g {params.gtf_file} \
                     -o {params.output_dir} \
@@ -100,25 +101,6 @@ rule generate_saf_and_gene_lengths:
             # Touch the "saf_creation_skipped.txt" file
             with open(output.saf_creation_status, "w") as f:
                 f.write("SAF creation skipped.\n")
-
-#rule rename_files:
-#    input:
-#        # Ensure the input directory exists
-#        directory = config["input_dir"]
-#    output:
-#        renaming_done ="{output_dir}/{sample}/snakemake_checkpoints/renaming_done.txt",
-#        mapping_file = "{output_dir}/{sample}/renaming_map.json"
-#    run:
-#        from utils import rename_files
-#        # Perform renaming for the sample
-#        rename_files(
-#            input_dir = input.directory,
-#            config_file = "config.yaml",
-#            mapping_file = output.mapping_file
-#        )
-#        # Touch the renaming_done.txt file to indicate completion
-#        with open(output.renaming_done, "w") as f:
-#            f.write("Done renaming files!")
 
 rule rename_files:
     input:
@@ -154,18 +136,22 @@ if config.get("run_fastp", False):
             fastp_exec = config["executables"]["fastp"],
             read1 = lambda wildcards: f"{config['input_dir']}/{wildcards.sample}_R1.fastq.gz",
             read2_param = lambda wildcards: f"-I {config['input_dir']}/{wildcards.sample}_R2.fastq.gz" if config["read_type"] == "paired" else "",
-            trimmed_read2_param = lambda wildcards: f"-O {wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R2.fastq.gz if config['read_type'] == 'paired' else ''",
+            trimmed_read2_param = lambda wildcards: (
+    f"-O {wildcards.output_dir}/{wildcards.sample}/results/trimmed_fastq/{wildcards.sample}_trimmed_R2.fastq.gz"
+    if config["read_type"] == "paired" else ""
+),
             detect_adapter_for_pe = lambda wildcards: "--detect_adapter_for_pe" if config["read_type"] == "paired" else "",
             threads = config["fastp_threads"],
             extra = config.get("fastp_params", ""),
             log_file = "{output_dir}/{sample}/results/logs/fastp_memory_log.txt",
             json_report = "{output_dir}/{sample}/results/fastp_stats/{sample}_fastp.json",
-            html_report = "{output_dir}/{sample}/results/fastp_stats/{sample}_fastp.html"
+            html_report = "{output_dir}/{sample}/results/fastp_stats/{sample}_fastp.html",
+            time_exec = config["executables"]["gnu_time"]
         resources:
             mem_mb = config.get("fastp_mem_mb", 2000)
         shell:
             """
-            /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+            {params.time_exec} -v -o {params.log_file} \
             {params.fastp_exec} -i {params.read1} \
             {params.read2_param} \
             -o {output.trimmed_read1} \
@@ -204,12 +190,13 @@ rule fastqc_raw:
         ),
         fastqc_exec = config["executables"]["fastqc"],
         out_folder = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/fastqc/",
-        log_file = "{output_dir}/{sample}/results/logs/fastqc_raw_memory_log.txt"
+        log_file = "{output_dir}/{sample}/results/logs/fastqc_raw_memory_log.txt",
+        time_exec = config["executables"]["gnu_time"]
     resources:
         mem_mb = config.get("fastqc_mem_mb", 1000)
     shell:
         """
-         /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+        {params.time_exec} -v -o {params.log_file} \
         {params.fastqc_exec} {params.raw} -t 2 -o {params.out_folder}
         """
 
@@ -232,12 +219,13 @@ rule fastqc_trimmed:
         ),
         fastqc_exec = config["executables"]["fastqc"],
         out_folder = lambda wildcards: f"{wildcards.output_dir}/{wildcards.sample}/results/fastqc/",
-        log_file = "{output_dir}/{sample}/results/logs/fastqc_trimmed_memory_log.txt"
+        log_file = "{output_dir}/{sample}/results/logs/fastqc_trimmed_memory_log.txt",
+        time_exec = config["executables"]["gnu_time"]
     resources:
         mem_mb = config.get("fastqc_mem_mb", 1000)
     shell:
         """
-        /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+        {params.time_exec} -v -o {params.log_file} \
         {params.fastqc_exec} {params.trimmed} -t 2 -o {params.out_folder}
         """
 
@@ -259,7 +247,8 @@ rule star_mapping:
         quant_mode = config.get("quant_mode", "GeneCounts"),
         star_params = config.get("star_params", ""),
         star_exec = config["executables"]["star"],
-        log_file = "{output_dir}/{sample}/results/logs/star_mapping_memory_log.txt"
+        log_file = "{output_dir}/{sample}/results/logs/star_mapping_memory_log.txt",
+        time_exec = config["executables"]["gnu_time"]
     resources:
         mem_mb = config.get("star_mem_mb", 37000) 
     run:
@@ -273,7 +262,7 @@ rule star_mapping:
         # Run the STAR command
         shell(
             """
-            /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+            {params.time_exec} -v -o {params.log_file} \
             {params.star_exec} --runThreadN {threads} \
                  --genomeDir {params.genome_dir} \
                  --readFilesIn {input.read1} {input.read2} \
@@ -328,14 +317,15 @@ rule featurecounts:
         intron_dir = "{output_dir}/{sample}/results/intron",
         featurecounts_params = config.get("featurecounts_params", "-p --largestOverlap --primary"),
         featurecounts_exec = config["executables"]["featurecounts"],
-        log_file = "{output_dir}/{sample}/results/logs/featurecounts_memory_log.txt"
+        log_file = "{output_dir}/{sample}/results/logs/featurecounts_memory_log.txt",
+        time_exec = config["executables"]["gnu_time"]
     resources:
         mem_mb = config.get("featurecounts_mem_mb", 300)
     shell:
         """
         mkdir -p {params.exon_dir} {params.intron_dir} && \
         chmod u+w {params.exon_dir} {params.intron_dir} && \
-        /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+        {params.time_exec} -v -o {params.log_file} \
         {params.featurecounts_exec} -F SAF -a {input.exon_saf} -o {output.exon} -T {threads} -R BAM {params.featurecounts_params} {input.bam} && \
         {params.featurecounts_exec} -F SAF -a {input.intron_saf} -o {output.intron} -T {threads} -R BAM {params.featurecounts_params} {input.bam}
         """
@@ -375,12 +365,13 @@ rule merge_bam:
         threads = config.get("merge_threads", 10),  # Default threads for sorting
         index_flag = lambda wildcards: "--index" if config.get("merge_index", True) else "",  # Dynamically set the --index flag
         log=lambda wildcards: f"{config['output_dir']}/{wildcards.sample}/results/{wildcards.sample}_merge_bam.log",
-        log_file = "{output_dir}/{sample}/results/logs/merge_bam_memory_log.txt" 
+        log_file = "{output_dir}/{sample}/results/logs/merge_bam_memory_log.txt",
+        time_exec = config["executables"]["gnu_time"]
     resources:
         mem_mb = config.get("merge_mem_mb", 10000)
     shell:
         """
-        /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+        {params.time_exec} -v -o {params.log_file} \
         {params.python_exec} tools/merge_exon_and_intron_bamfiles.py \
             -e {input.exon} \
             -i {input.intron} \
@@ -405,10 +396,11 @@ rule quantify_expression:
         expression_folder = "{output_dir}/{sample}/results/expression/{sample}",
         stats_folder = "{output_dir}/{sample}/results/stats/{sample}",
         threads = config.get("quant_threads", 10),
-        log_file = "{output_dir}/{sample}/results/logs/quantify_expression_memory_log.txt"
+        log_file = "{output_dir}/{sample}/results/logs/quantify_expression_memory_log.txt",
+        time_exec = config["executables"]["gnu_time"]
     shell:
         """
-        /home/leonard.hartmanis/packages/gnu_time/bin/time -v -o {params.log_file} \
+        {params.time_exec} -v -o {params.log_file} \
         {params.python_exec} tools/quantify_expression_generate_stats.py \
             -b {input.bam} \
             -e {params.expression_folder} \
