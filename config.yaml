@@ -8,6 +8,7 @@ executables:
   star: "/path/to/STAR"
   featurecounts: "/path/to/featureCounts"
   python: "/usr/bin/python3"  # Path to Python interpreter
+  gnu_time: "/path/to/conda/env/bin/time"
 
 # Directories
 input_dir: "data"
