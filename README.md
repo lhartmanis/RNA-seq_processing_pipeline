@@ -35,7 +35,7 @@ In adition, this pipeline requres **GNU time** for resource logging.
 #### **Install via conda (recommended)**
 ```conda install -c conda-forge time```
 #### **Verify Installation**
-```time --version```
+```$(which time) --version```
 
 Then add the resulting path to your ```config.yaml``` file.
 
