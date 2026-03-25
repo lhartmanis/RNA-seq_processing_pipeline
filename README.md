@@ -24,6 +24,7 @@ The following software must be installed and available in your `PATH`:
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 - [STAR](https://github.com/alexdobin/STAR)
 - [featureCounts](http://subread.sourceforge.net/)
+- [Samtools][https://www.htslib.org/]
 - Python 3.x:
     - pyranges
     - pysam
