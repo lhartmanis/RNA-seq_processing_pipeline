@@ -30,6 +30,8 @@ The following software must be installed and available in your `PATH`:
     - pysam
     - pandas
     - numpy
+    - matplotlib
+    - seaborn
 
 In addition, this pipeline requires **GNU time** for resource logging.
 
